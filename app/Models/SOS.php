@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class SOS extends Model
 {
@@ -52,9 +53,16 @@ class SOS extends Model
     public static function generateNomorKasus(): string
     {
         try {
-            $lastRecord = static::whereNotNull('nomor_kasus')
-                ->orderByRaw("CAST(SUBSTRING(nomor_kasus FROM '[0-9]+') AS INTEGER) DESC NULLS LAST")
-                ->first();
+            $driver = DB::connection()->getDriverName();
+            if ($driver === 'pgsql') {
+                $lastRecord = static::whereNotNull('nomor_kasus')
+                    ->orderByRaw("CAST(SUBSTRING(nomor_kasus FROM '[0-9]+') AS INTEGER) DESC NULLS LAST")
+                    ->first();
+            } else {
+                $lastRecord = static::whereNotNull('nomor_kasus')
+                    ->latest('id')
+                    ->first();
+            }
 
             if ($lastRecord && preg_match('/SOS-(\d+)/', $lastRecord->nomor_kasus, $matches)) {
                 $nextNum = ((int) $matches[1]) + 1;

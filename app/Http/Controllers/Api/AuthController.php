@@ -244,10 +244,11 @@ class AuthController extends Controller
         ]);
 
         if ($request->hasFile('dokumen_kyc')) {
-            $path = $request->file('dokumen_kyc')->store('kyc_documents', 'public');
+            $path = $request->file('dokumen_kyc')->store('kyc_documents', 'local');
             $validated['dokumen_kyc'] = $path;
         } elseif ($request->filled('dokumen_kyc') && is_string($request->dokumen_kyc)) {
-            if (str_contains($request->dokumen_kyc, '..') || str_contains($request->dokumen_kyc, "\0") || !Storage::disk('public')->exists($request->dokumen_kyc)) {
+            $exists = Storage::disk('local')->exists($request->dokumen_kyc) || Storage::disk('public')->exists($request->dokumen_kyc);
+            if (str_contains($request->dokumen_kyc, '..') || str_contains($request->dokumen_kyc, "\0") || !$exists) {
                 return response()->json([
                     'message' => 'File dokumen KYC yang dirujuk tidak ditemukan di sistem.'
                 ], 422);
@@ -491,7 +492,7 @@ class AuthController extends Controller
 
             $dokumenKyc = null;
             if ($request->hasFile('dokumen_kyc')) {
-                $dokumenKyc = $request->file('dokumen_kyc')->store('kyc_documents', 'public');
+                $dokumenKyc = $request->file('dokumen_kyc')->store('kyc_documents', 'local');
             }
 
             $user = User::create([

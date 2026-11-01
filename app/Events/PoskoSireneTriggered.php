@@ -29,8 +29,8 @@ class PoskoSireneTriggered implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('posko-channel'),
-            new Channel('relawan-channel'),
+            new PrivateChannel('posko-channel'),
+            new PrivateChannel('relawan-channel'),
         ];
     }
 

@@ -132,7 +132,7 @@ class User extends Authenticatable
             return null;
         }
 
-        return url('storage/' . $this->dokumen_kyc);
+        return url('api/storage-file/' . $this->dokumen_kyc);
     }
 
     /**

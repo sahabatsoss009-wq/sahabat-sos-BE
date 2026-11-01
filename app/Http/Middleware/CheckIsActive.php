@@ -35,7 +35,9 @@ class CheckIsActive
             }
 
             // Hapus token yang sedang digunakan untuk role pengguna biasa
-            $user->currentAccessToken()->delete();
+            if ($user->currentAccessToken()) {
+                $user->currentAccessToken()->delete();
+            }
 
             return response()->json([
                 'message' => 'Akun kamu telah dinonaktifkan. Akses ditolak.'

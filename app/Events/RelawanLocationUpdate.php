@@ -58,8 +58,8 @@ class RelawanLocationUpdate implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('command-center'),
-            new Channel('relawan-locations'),
+            new PrivateChannel('command-center'),
+            new PrivateChannel('relawan-locations'),
         ];
 
         if ($this->sosId) {

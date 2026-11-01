@@ -33,7 +33,7 @@ class SOSUpdateStatus implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('command-center'),
+            new PrivateChannel('command-center'),
             new PrivateChannel('relawan-channel'),
             new PrivateChannel('sos.' . $this->sos->id),
         ];

@@ -187,10 +187,9 @@ class HubungiWhatsAppController extends Controller
             return response()->json(['message' => ucfirst($tipe) . ' tidak ditemukan'], 404);
         }
 
-        // Otorisasi: Admin/Superadmin dengan izin kelola_laporan/pantau_peta ATAU Relawan penanggung jawab kasus ini yang sudah terverifikasi
-        $isAdmin = in_array($user->role, ['admin', 'superadmin']) ||
-                   $user->hasPermission('kelola_laporan') ||
-                   $user->hasPermission('pantau_peta');
+        // Otorisasi: Superadmin ATAU Admin dengan izin kelola_laporan/pantau_peta ATAU Relawan penanggung jawab kasus ini yang sudah terverifikasi
+        $isAdmin = ($user->role === 'superadmin') ||
+                   ($user->role === 'admin' && ($user->hasPermission('kelola_laporan') || $user->hasPermission('pantau_peta')));
 
         $isAssignedRelawan = ($user->role === 'relawan' && (int)$kasus->id_relawan === (int)$user->id && $user->status_verifikasi === 'terverifikasi' && $user->is_active);
 
@@ -365,10 +364,9 @@ class HubungiWhatsAppController extends Controller
 
         // Validasi Otorisasi:
         // Relawan hanya boleh menghubungi jika dia adalah relawan yang menangani kasus ini dan sudah terverifikasi.
-        // Admin/Superadmin boleh menghubungi kapan saja untuk koordinasi.
-        $isAdmin = in_array($user->role, ['admin', 'superadmin']) || 
-                   $user->hasPermission('kelola_laporan') || 
-                   $user->hasPermission('pantau_peta');
+        // Superadmin boleh kapan saja, Admin wajib memiliki izin kelola_laporan atau pantau_peta
+        $isAdmin = ($user->role === 'superadmin') ||
+                   ($user->role === 'admin' && ($user->hasPermission('kelola_laporan') || $user->hasPermission('pantau_peta')));
 
         $isAssignedRelawan = ($user->role === 'relawan' && (int)$kasus->id_relawan === (int)$user->id && $user->status_verifikasi === 'terverifikasi' && $user->is_active);
 

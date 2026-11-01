@@ -35,8 +35,8 @@ class LaporanCreated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('command-center'),
-            new Channel('laporan-channel'),
+            new PrivateChannel('command-center'),
+            new PrivateChannel('laporan-channel'),
             new PrivateChannel('relawan-channel'),
         ];
 

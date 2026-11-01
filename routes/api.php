@@ -243,19 +243,78 @@ Route::middleware('auth:sanctum',CheckIsActive::class)->group(function () {
 
 });
 
-// Route proxy untuk mengambil file dari storage (berguna agar lolos CORS saat development dengan artisan serve)
-Route::get('/storage-file/{path}', function ($path) {
-    $basePath = realpath(storage_path('app/public'));
-    if (!$basePath) {
+// Route proxy untuk mengambil file dari storage (dilengkapi proteksi autentikasi untuk dokumen sensitif)
+Route::get('/storage-file/{path}', function (Request $request, $path) {
+    // 1. Cek proteksi akses untuk Dokumen Sensitif / Identitas KYC
+    $isKyc = str_starts_with($path, 'kyc_documents/') || str_contains($path, 'kyc_documents');
+    if ($isKyc) {
+        $user = auth('sanctum')->user();
+        if (!$user && $request->query('token')) {
+            $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($request->query('token'));
+            if ($tokenModel) {
+                $expiration = config('sanctum.expiration');
+                $isExpired = $expiration && $tokenModel->created_at->lte(now()->subMinutes($expiration));
+                if (!$isExpired) {
+                    $user = $tokenModel->tokenable;
+                }
+            }
+        }
+
+        if (!$user || (isset($user->is_active) && !$user->is_active)) {
+            abort(401, 'Autentikasi diperlukan atau akun pengguna tidak aktif.');
+        }
+
+        $isSuperadmin = $user->role === 'superadmin';
+        $isAdminWithPerm = $user->role === 'admin' && (method_exists($user, 'hasPermission') ? ($user->hasPermission('verifikasi_relawan') || $user->hasPermission('kelola_relawan')) : true);
+        $isAdmin = $isSuperadmin || $isAdminWithPerm;
+        $isOwner = ($user->dokumen_kyc && str_contains($path, basename($user->dokumen_kyc)));
+
+        if (!$isAdmin && !$isOwner) {
+            abort(403, 'Akses ditolak. Anda tidak berwenang melihat dokumen verifikasi ini.');
+        }
+    }
+
+    // Pastikan folder private storage ada jika belum terbuat
+    $privateDir = storage_path('app/private');
+    if (!is_dir($privateDir)) {
+        @mkdir($privateDir, 0755, true);
+    }
+
+    $candidatePaths = [
+        storage_path('app/public/' . $path),
+        storage_path('app/private/' . $path),
+        storage_path('app/' . $path),
+    ];
+
+    $realPath = null;
+    foreach ($candidatePaths as $candidate) {
+        $resolved = realpath($candidate);
+        if ($resolved && is_file($resolved)) {
+            $realPath = $resolved;
+            break;
+        }
+    }
+
+    // Proteksi Path Traversal: pastikan file ada dan berada di dalam direktori storage yang sah
+    if (!$realPath) {
         abort(404);
     }
 
-    $targetPath = storage_path('app/public/' . $path);
-    $realPath = realpath($targetPath);
+    $allowedBaseDirs = array_filter([
+        realpath(storage_path('app/public')),
+        realpath(storage_path('app/private')),
+        realpath(storage_path('app')),
+    ]);
 
-    // 1. Proteksi Path Traversal: pastikan file ada, berupa file (bukan direktori),
-    // dan path kanonikalnya harus berada di dalam direktori storage app/public
-    if (!$realPath || !is_file($realPath) || !str_starts_with($realPath, $basePath . DIRECTORY_SEPARATOR)) {
+    $isInsideAllowed = false;
+    foreach ($allowedBaseDirs as $baseDir) {
+        if ($baseDir && str_starts_with($realPath, $baseDir . DIRECTORY_SEPARATOR)) {
+            $isInsideAllowed = true;
+            break;
+        }
+    }
+
+    if (!$isInsideAllowed) {
         abort(404);
     }
 
@@ -266,11 +325,19 @@ Route::get('/storage-file/{path}', function ($path) {
         abort(403, 'Akses terhadap tipe file ini ditolak demi keamanan.');
     }
 
-    // 3. Kembalikan file dengan Security Headers (mencegah MIME sniffing, iframe embedding, dan script injection)
-    return response()->file($realPath, [
-        'X-Content-Type-Options'  => 'nosniff',
-        'Content-Security-Policy' => "default-src 'none'; sandbox",
-        'X-Frame-Options'         => 'DENY',
-        'Cache-Control'           => 'private, max-age=3600',
-    ]);
+    // 3. Kembalikan file dengan Security Headers produksi
+    $headers = [
+        'X-Content-Type-Options' => 'nosniff',
+        'X-Frame-Options'        => 'SAMEORIGIN',
+        'Cache-Control'          => $isKyc ? 'private, no-cache, no-store, must-revalidate' : 'public, max-age=86400',
+    ];
+
+    if ($extension === 'pdf') {
+        $headers['Content-Security-Policy'] = "default-src 'self' blob:; object-src 'self'; script-src 'none';";
+        $headers['Content-Disposition'] = 'inline; filename="' . basename($realPath) . '"';
+    } else {
+        $headers['Content-Security-Policy'] = "default-src 'none'; img-src 'self' data: blob:; media-src 'self' data: blob:; style-src 'unsafe-inline';";
+    }
+
+    return response()->file($realPath, $headers);
 })->where('path', '.*')->middleware('throttle:120,1');

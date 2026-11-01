@@ -233,6 +233,15 @@ class AdminManagementController extends Controller
             'alamat'   => 'nullable|string|max:255',
         ]);
 
+        $currentUser = $request->user();
+        if ($request->filled('password')) {
+            if ($currentUser && $currentUser->role !== 'superadmin' && (int) $currentUser->id !== (int) $admin->id) {
+                return response()->json([
+                    'message' => 'Hanya Superadmin yang berwenang mereset kata sandi administrator lain.'
+                ], 403);
+            }
+        }
+
         $account = $admin->accounts()->where('provider', 'local')->first();
 
         if ($request->has('email')) {
