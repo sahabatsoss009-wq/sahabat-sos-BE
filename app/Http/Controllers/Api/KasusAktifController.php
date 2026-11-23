@@ -199,7 +199,6 @@ class KasusAktifController extends Controller
                 $result['battery_level']    = $item->battery_level;
                 $result['signal_strength']  = $item->signal_strength;
                 $result['device_info']      = $item->device_info;
-                $result['heart_rate']       = $item->device_info['heart_rate'] ?? ($item->device_info['smartwatch']['heart_rate'] ?? null);
             }
 
             if ($item->relationLoaded('catatanPenanganan')) {

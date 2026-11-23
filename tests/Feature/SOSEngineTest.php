@@ -489,4 +489,62 @@ class SOSEngineTest extends TestCase
             ])
             ->assertStatus(404);
     }
+
+    public function test_sos_trigger_accepts_legacy_smartwatch_payload_without_storing_smartwatch_data(): void
+    {
+        Event::fake([SOSCreated::class]);
+        $pengguna = $this->createPengguna();
+
+        $response = $this->actingAs($pengguna)->postJson('/api/sos/trigger', [
+            'latitude'        => -7.7925,
+            'longitude'       => 110.3658,
+            'trigger_source'  => 'smartband_heart_rate',
+            'heart_rate'      => 142,
+            'battery_level'   => 80,
+            'signal_strength' => '4G',
+            'device_info'     => [
+                'mobile'     => ['brand' => 'Samsung', 'model' => 'Galaxy A54', 'battery_level' => 80],
+                'smartwatch' => ['device_id' => 'watch_1', 'heart_rate' => 142],
+                'smartband'  => ['device_id' => 'band_1', 'bpm' => 142],
+            ],
+        ]);
+
+        $response->assertStatus(201);
+        $deviceInfo = $response->json('data.device_info');
+        $this->assertArrayNotHasKey('smartwatch', $deviceInfo);
+        $this->assertArrayNotHasKey('smartband', $deviceInfo);
+        $this->assertArrayNotHasKey('heart_rate', $deviceInfo);
+        $this->assertArrayNotHasKey('bpm', $deviceInfo);
+        $this->assertEquals('Samsung', $deviceInfo['mobile']['brand']);
+    }
+
+    public function test_legacy_sos_record_with_smartwatch_json_reads_safely_after_table_dropped(): void
+    {
+        $pengguna = $this->createPengguna();
+
+        $sos = SOS::create([
+            'id_pengguna'     => $pengguna->id,
+            'latitude'        => -7.7820,
+            'longitude'       => 110.3675,
+            'status_sos'      => 'belum ditangani',
+            'waktu_sos'       => now(),
+            'battery_level'   => 75,
+            'signal_strength' => '4G',
+            'device_info'     => [
+                'trigger_source' => 'tuya_physical_button',
+                'mobile'         => ['brand' => 'Xiaomi', 'model' => 'Redmi Note 12', 'battery_level' => 75],
+                'tuya'           => ['device_id' => 'tuya_01', 'device_name' => 'Tombol SOS', 'battery_level' => 90, 'is_online' => true],
+                'smartwatch'     => ['device_id' => 'hw_1', 'heart_rate' => 115, 'fall_detected' => true],
+            ],
+        ]);
+
+        $info = $sos->fresh()->device_info;
+        $this->assertEquals('Xiaomi', $info['mobile']['brand']);
+        $this->assertEquals('tuya_01', $info['tuya']['device_id']);
+        $this->assertEquals('tuya_physical_button', $info['trigger_source']);
+        $this->assertArrayNotHasKey('smartwatch', $info);
+        $this->assertArrayNotHasKey('smartband', $info);
+        $this->assertArrayNotHasKey('heart_rate', $info);
+        $this->assertArrayNotHasKey('bpm', $info);
+    }
 }
