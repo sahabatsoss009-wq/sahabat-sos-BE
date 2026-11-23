@@ -19,7 +19,6 @@ use App\Http\Controllers\Api\KasusAktifController;
 use App\Http\Controllers\Api\HubungiWhatsAppController;
 use App\Http\Controllers\Api\BerandaRelawanController;
 use App\Http\Controllers\Api\AdminProfileController;
-use App\Http\Controllers\Api\SmartwatchController;
 
 // Public Authentication Routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -85,14 +84,6 @@ Route::middleware('auth:sanctum',CheckIsActive::class)->group(function () {
         Route::patch('/pengguna/kontak-darurat/{id}/toggle-notif', [KontakDaruratController::class, 'toggleNotif']);
         // Riwayat Lengkap Pengguna (SOS & Laporan)
         Route::get('/pengguna/riwayat', [BerandaRelawanController::class, 'riwayatPengguna']);
-
-        // Smartwatch Management Endpoints
-        Route::get('/pengguna/smartwatch', [SmartwatchController::class, 'index']);
-        Route::post('/pengguna/smartwatch', [SmartwatchController::class, 'store']);
-        Route::get('/pengguna/smartwatch/{id}', [SmartwatchController::class, 'show']);
-        Route::put('/pengguna/smartwatch/{id}', [SmartwatchController::class, 'update']);
-        Route::delete('/pengguna/smartwatch/{id}', [SmartwatchController::class, 'destroy']);
-        Route::post('/pengguna/smartwatch/{id}/sync-telemetry', [SmartwatchController::class, 'syncTelemetry']);
     });
 
     // Route Khusus Relawan

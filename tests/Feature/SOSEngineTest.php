@@ -9,6 +9,7 @@ use App\Models\SOSActivity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class SOSEngineTest extends TestCase
@@ -463,5 +464,29 @@ class SOSEngineTest extends TestCase
 
         $response->assertStatus(403);
         $this->assertEquals('ditangani', $sos->fresh()->status_sos);
+    }
+
+    public function test_smartwatch_endpoints_are_removed_and_table_is_dropped(): void
+    {
+        $pengguna = $this->createPengguna();
+
+        $this->assertFalse(Schema::hasTable('user_smartwatches'));
+
+        // Verify drop migration is cleanly reversible on test database
+        $migration = require database_path('migrations/2026_11_23_000001_drop_user_smartwatches_table.php');
+        $migration->down();
+        $this->assertTrue(Schema::hasTable('user_smartwatches'));
+        $migration->up();
+        $this->assertFalse(Schema::hasTable('user_smartwatches'));
+
+        $this->actingAs($pengguna)
+            ->getJson('/api/pengguna/smartwatch')
+            ->assertStatus(404);
+
+        $this->actingAs($pengguna)
+            ->postJson('/api/pengguna/smartwatch', [
+                'device_identifier' => 'hw_watch_gt4_001',
+            ])
+            ->assertStatus(404);
     }
 }

@@ -258,12 +258,4 @@ class User extends Authenticatable
         $permissions = $this->permissions ?? [];
         return in_array($permission, $permissions);
     }
-
-    /**
-     * Relasi ke Smartwatch yang dipasangkan oleh pengguna
-     */
-    public function smartwatches()
-    {
-        return $this->hasMany(UserSmartwatch::class, 'id_pengguna');
-    }
 }
