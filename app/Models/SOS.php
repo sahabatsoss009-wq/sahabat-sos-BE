@@ -153,7 +153,10 @@ class SOS extends Model
             ];
         }
 
-        $triggerSource = $raw['trigger_source'] ?? ($tuya ? 'tuya_physical_button' : 'app_button');
+        $rawTriggerSource = $raw['trigger_source'] ?? null;
+        $triggerSource = in_array($rawTriggerSource, ['app_button', 'tuya_physical_button'], true)
+            ? $rawTriggerSource
+            : ($tuya ? 'tuya_physical_button' : 'app_button');
 
         return [
             // Flat alias untuk kompatibilitas kode lama

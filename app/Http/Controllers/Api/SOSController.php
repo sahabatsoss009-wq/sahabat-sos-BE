@@ -156,17 +156,29 @@ class SOSController extends Controller
             $deviceInfo = [];
         }
 
-        if ($request->filled('trigger_source')) {
-            $deviceInfo['trigger_source'] = $request->trigger_source;
-        }
-
         // Sanitasi defensif: buang field wearable lama bila masih dikirim oleh klien versi terdahulu
         unset(
             $deviceInfo['smartwatch'],
             $deviceInfo['smartband'],
             $deviceInfo['heart_rate'],
-            $deviceInfo['bpm']
+            $deviceInfo['bpm'],
+            $deviceInfo['heart_rate_bpm']
         );
+        if (isset($deviceInfo['mobile']) && is_array($deviceInfo['mobile'])) {
+            unset(
+                $deviceInfo['mobile']['heart_rate'],
+                $deviceInfo['mobile']['bpm'],
+                $deviceInfo['mobile']['heart_rate_bpm']
+            );
+        }
+
+        // Normalisasi trigger_source agar hanya menyimpan sumber resmi (app_button / tuya_physical_button)
+        $rawTriggerSource = $request->filled('trigger_source')
+            ? (string) $request->trigger_source
+            : ($deviceInfo['trigger_source'] ?? null);
+        $deviceInfo['trigger_source'] = in_array($rawTriggerSource, ['app_button', 'tuya_physical_button'], true)
+            ? $rawTriggerSource
+            : (!empty($deviceInfo['tuya']) ? 'tuya_physical_button' : 'app_button');
 
         if ($isFallback) {
             $deviceInfo['is_gps_fallback'] = true;

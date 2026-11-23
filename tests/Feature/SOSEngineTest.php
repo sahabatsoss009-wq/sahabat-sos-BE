@@ -503,7 +503,7 @@ class SOSEngineTest extends TestCase
             'battery_level'   => 80,
             'signal_strength' => '4G',
             'device_info'     => [
-                'mobile'     => ['brand' => 'Samsung', 'model' => 'Galaxy A54', 'battery_level' => 80],
+                'mobile'     => ['brand' => 'Samsung', 'model' => 'Galaxy A54', 'battery_level' => 80, 'heart_rate' => 142],
                 'smartwatch' => ['device_id' => 'watch_1', 'heart_rate' => 142],
                 'smartband'  => ['device_id' => 'band_1', 'bpm' => 142],
             ],
@@ -511,11 +511,22 @@ class SOSEngineTest extends TestCase
 
         $response->assertStatus(201);
         $deviceInfo = $response->json('data.device_info');
+        $this->assertEquals('app_button', $deviceInfo['trigger_source']);
         $this->assertArrayNotHasKey('smartwatch', $deviceInfo);
         $this->assertArrayNotHasKey('smartband', $deviceInfo);
         $this->assertArrayNotHasKey('heart_rate', $deviceInfo);
         $this->assertArrayNotHasKey('bpm', $deviceInfo);
+        $this->assertArrayNotHasKey('heart_rate', $deviceInfo['mobile']);
         $this->assertEquals('Samsung', $deviceInfo['mobile']['brand']);
+
+        $sosId = $response->json('data.id');
+        $rawStored = json_decode(SOS::find($sosId)->getRawOriginal('device_info'), true);
+        $this->assertEquals('app_button', $rawStored['trigger_source']);
+        $this->assertArrayNotHasKey('heart_rate', $rawStored['mobile'] ?? []);
+
+        $activity = SOSActivity::where('sos_id', $sosId)->where('action', 'sos_dipicu')->first();
+        $this->assertNotNull($activity);
+        $this->assertEquals('app_button', $activity->extra_data['trigger_source'] ?? null);
     }
 
     public function test_legacy_sos_record_with_smartwatch_json_reads_safely_after_table_dropped(): void
@@ -546,5 +557,25 @@ class SOSEngineTest extends TestCase
         $this->assertArrayNotHasKey('smartband', $info);
         $this->assertArrayNotHasKey('heart_rate', $info);
         $this->assertArrayNotHasKey('bpm', $info);
+
+        $legacyWatchSos = SOS::create([
+            'id_pengguna'     => $pengguna->id,
+            'latitude'        => -7.7820,
+            'longitude'       => 110.3675,
+            'status_sos'      => 'selesai',
+            'waktu_sos'       => now()->subDay(),
+            'battery_level'   => 60,
+            'signal_strength' => '4G',
+            'device_info'     => [
+                'trigger_source' => 'smartband_heart_rate',
+                'mobile'         => ['brand' => 'Oppo', 'model' => 'Reno 8', 'battery_level' => 60],
+                'smartwatch'     => ['device_id' => 'hw_2', 'heart_rate' => 145],
+            ],
+        ]);
+
+        $legacyInfo = $legacyWatchSos->fresh()->device_info;
+        $this->assertEquals('app_button', $legacyInfo['trigger_source']);
+        $this->assertEquals('Oppo', $legacyInfo['mobile']['brand']);
+        $this->assertArrayNotHasKey('smartwatch', $legacyInfo);
     }
 }
