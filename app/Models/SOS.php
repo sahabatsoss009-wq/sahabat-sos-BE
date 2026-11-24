@@ -96,8 +96,8 @@ class SOS extends Model
         $value = $value ?? ($this->attributes['device_info'] ?? null);
         $raw = !empty($value) ? (is_array($value) ? $value : json_decode($value, true)) : [];
 
-        // Deteksi format terstruktur (punya key 'mobile' atau 'tuya') atau legacy flat
-        $hasStructured = isset($raw['mobile']) || isset($raw['tuya']);
+        // Deteksi format terstruktur (termasuk baris historis yang hanya menyimpan key wearable) atau legacy flat
+        $hasStructured = isset($raw['mobile']) || isset($raw['tuya']) || isset($raw['smartwatch']) || isset($raw['smartband']);
         $mobileRaw = $hasStructured ? ($raw['mobile'] ?? []) : $raw;
         $tuyaRaw = $raw['tuya'] ?? null;
 

@@ -558,6 +558,26 @@ class SOSEngineTest extends TestCase
         $this->assertArrayNotHasKey('heart_rate', $info);
         $this->assertArrayNotHasKey('bpm', $info);
 
+        $transformed = \App\Http\Controllers\Api\KasusAktifController::transformItem($sos->fresh(), 'sos', true);
+        $this->assertEquals('tuya_physical_button', $transformed['trigger_source']);
+        $this->assertArrayNotHasKey('heart_rate', $transformed);
+
+        $watchOnlySos = SOS::create([
+            'id_pengguna'     => $pengguna->id,
+            'latitude'        => -7.7820,
+            'longitude'       => 110.3675,
+            'status_sos'      => 'selesai',
+            'waktu_sos'       => now()->subDays(2),
+            'battery_level'   => 85,
+            'signal_strength' => '4G',
+            'device_info'     => [
+                'smartwatch' => ['brand' => 'huawei', 'battery_level' => 12, 'heart_rate' => 110],
+            ],
+        ]);
+        $watchOnlyInfo = $watchOnlySos->fresh()->device_info;
+        $this->assertEquals('Perangkat Mobile', $watchOnlyInfo['mobile']['brand']);
+        $this->assertEquals(85, $watchOnlyInfo['mobile']['battery_level']);
+
         $legacyWatchSos = SOS::create([
             'id_pengguna'     => $pengguna->id,
             'latitude'        => -7.7820,

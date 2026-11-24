@@ -182,7 +182,7 @@ class KasusAktifController extends Controller
             'relawan'       => $relawanData,
             'lokasi'        => $lokasiData,
             'deskripsi'     => $isSos ? 'Panggilan Darurat' : ($item->deskripsi ?? ''),
-            'trigger_source'=> $isSos ? ($item->trigger_source ?? 'app_button') : null,
+            'trigger_source'=> $isSos ? ($item->device_info['trigger_source'] ?? ($item->trigger_source ?? 'app_button')) : null,
             'waktu'         => $waktu ? $waktu->toDateTimeString() : null,
         ];
 
@@ -195,7 +195,7 @@ class KasusAktifController extends Controller
 
         if ($isDetail) {
             if ($isSos) {
-                $result['trigger_source']   = $item->trigger_source ?? 'app_button';
+                $result['trigger_source']   = $item->device_info['trigger_source'] ?? ($item->trigger_source ?? 'app_button');
                 $result['battery_level']    = $item->battery_level;
                 $result['signal_strength']  = $item->signal_strength;
                 $result['device_info']      = $item->device_info;
