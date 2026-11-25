@@ -488,6 +488,16 @@ class SOSEngineTest extends TestCase
                 'device_identifier' => 'hw_watch_gt4_001',
             ])
             ->assertStatus(404);
+
+        $this->actingAs($pengguna)
+            ->deleteJson('/api/pengguna/smartwatch/1')
+            ->assertStatus(404);
+
+        $this->actingAs($pengguna)
+            ->postJson('/api/pengguna/smartwatch/1/sync-telemetry', [
+                'heart_rate' => 98,
+            ])
+            ->assertStatus(404);
     }
 
     public function test_sos_trigger_accepts_legacy_smartwatch_payload_without_storing_smartwatch_data(): void
@@ -597,5 +607,26 @@ class SOSEngineTest extends TestCase
         $this->assertEquals('app_button', $legacyInfo['trigger_source']);
         $this->assertEquals('Oppo', $legacyInfo['mobile']['brand']);
         $this->assertArrayNotHasKey('smartwatch', $legacyInfo);
+
+        $sentinelTuyaSos = SOS::create([
+            'id_pengguna'     => $pengguna->id,
+            'latitude'        => -7.7820,
+            'longitude'       => 110.3675,
+            'status_sos'      => 'belum ditangani',
+            'waktu_sos'       => now(),
+            'battery_level'   => 80,
+            'signal_strength' => '4G',
+            'device_info'     => [
+                'trigger_source' => 'tuya_physical_button',
+                'mobile'         => ['brand' => 'Samsung', 'model' => 'A54', 'battery_level' => 80],
+                'tuya'           => ['device_id' => 'sim_device_001', 'battery_level' => -1, 'is_online' => false],
+            ],
+        ]);
+
+        $sentinelInfo = $sentinelTuyaSos->fresh()->device_info;
+        $this->assertNull($sentinelInfo['tuya']['battery_level']);
+        $this->assertEquals('N/A', $sentinelInfo['tuya']['battery_status']);
+        $this->assertFalse($sentinelInfo['tuya']['is_battery_low']);
+        $this->assertFalse($sentinelInfo['is_warning']);
     }
 }

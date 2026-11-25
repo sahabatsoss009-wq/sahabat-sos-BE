@@ -171,6 +171,12 @@ class SOSController extends Controller
                 $deviceInfo['mobile']['heart_rate_bpm']
             );
         }
+        if (isset($deviceInfo['tuya']) && is_array($deviceInfo['tuya'])) {
+            $tuyaBat = $deviceInfo['tuya']['battery_level'] ?? null;
+            if ($tuyaBat !== null && (!is_numeric($tuyaBat) || (int) $tuyaBat < 0 || (int) $tuyaBat > 100)) {
+                $deviceInfo['tuya']['battery_level'] = null;
+            }
+        }
 
         // Normalisasi trigger_source agar hanya menyimpan sumber resmi (app_button / tuya_physical_button)
         $rawTriggerSource = $request->filled('trigger_source')

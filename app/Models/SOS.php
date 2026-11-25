@@ -134,8 +134,9 @@ class SOS extends Model
         // Telemetri Perangkat IoT Tuya (jika ada)
         $tuya = null;
         if (!empty($tuyaRaw)) {
-            $tuyaBattery = isset($tuyaRaw['battery_level']) && $tuyaRaw['battery_level'] !== null
-                ? (int) $tuyaRaw['battery_level']
+            $rawTuyaBat = $tuyaRaw['battery_level'] ?? ($tuyaRaw['battery'] ?? null);
+            $tuyaBattery = is_numeric($rawTuyaBat) && (int) $rawTuyaBat >= 0 && (int) $rawTuyaBat <= 100
+                ? (int) $rawTuyaBat
                 : null;
             $tuyaIsOnline = (bool) ($tuyaRaw['is_online'] ?? true);
 
